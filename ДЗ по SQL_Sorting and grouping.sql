@@ -77,3 +77,20 @@ HAVING
     AND SUM(revenue) <= 50000
 ORDER BY
     seller_id ASC;
+
+-- 2 Часть
+-- Пункт 3
+SELECT
+    seller_id,
+    string_agg(DISTINCT category, ' - ' ORDER BY category) AS category_pair
+FROM
+    sellers
+WHERE
+    EXTRACT(YEAR FROM TO_DATE(date_reg, 'DD/MM/YYYY')) = 2022
+GROUP BY
+    seller_id
+HAVING
+    COUNT(DISTINCT category) = 2
+    AND SUM(revenue) > 75000
+ORDER BY
+    seller_id ASC;
