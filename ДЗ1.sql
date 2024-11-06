@@ -1,20 +1,15 @@
-
--- Этот запрос выбирает количество пользователей в каждом городе,
--- сгруппированных по возрастным категориям (young, adult, old).
-
 SELECT
-    city,  -- выбираем город пользователя
+    city,
     CASE
-        WHEN age BETWEEN 0 AND 20 THEN 'young'  -- если возраст от 0 до 20, категория - 'young'
-        WHEN age BETWEEN 21 AND 49 THEN 'adult'  -- если возраст от 21 до 49, категория - 'adult'
-        ELSE 'old'  -- если возраст 50 и выше, категория - 'old'
-    END AS age_category,  -- указываем возрастную категорию на основе возраста
-    COUNT(*) AS user_count  -- считаем количество пользователей в каждой возрастной категории для каждого города
+        WHEN age BETWEEN 0 AND 20 THEN 'young'
+        WHEN age BETWEEN 21 AND 49 THEN 'adult'
+        ELSE 'old'
+    END AS age_category,
+    COUNT(id) AS user_count
 FROM
-    users  -- таблица с данными о пользователях
+    users
 GROUP BY
-    city,  -- группируем по городу
-    age_category  -- группируем по возрастной категории
+    city,  
+    age_category
 ORDER BY
-    city ASC,  -- сортируем по городу в алфавитном порядке
-    user_count DESC;  -- сортируем по количеству пользователей в каждой категории в порядке убывания
+    user_count desc;
