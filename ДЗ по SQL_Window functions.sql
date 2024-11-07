@@ -214,7 +214,7 @@ WITH sales_data AS (
     JOIN goods g ON sa.id_good = g.id_good
     JOIN shops sh ON sa.shopnumber = sh.shopnumber
     WHERE
-        sh.city = 'СПб'  -- Adjust if your data uses a different name
+        sh.city = 'СПб'
     GROUP BY
         sa.date, sa.shopnumber, g.category
 ),
@@ -239,4 +239,3 @@ FROM
     ranked_sales
 WHERE
     prev_sales IS NOT NULL;
-
