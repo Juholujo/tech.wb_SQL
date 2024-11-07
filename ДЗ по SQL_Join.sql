@@ -52,3 +52,55 @@ HAVING
     OR COUNT(CASE WHEN o.order_status = 'canceled' THEN 1 END) > 0
 ORDER BY
     total_order_sum DESC;
+
+--- Часть 2
+--- Пункт 1
+SELECT p.product_category,
+       SUM(o.order_ammount) AS total_sales
+FROM Orders o
+JOIN Products p ON o.product_id = p.product_id
+GROUP BY p.product_category;
+
+--- Часть 2
+--- Пункт 2
+
+SELECT product_category
+FROM (
+    SELECT p.product_category,
+           SUM(o.order_ammount) AS total_sales
+    FROM Orders o
+    JOIN Products p ON o.product_id = p.product_id
+    GROUP BY p.product_category
+) AS category_sales
+WHERE total_sales = (
+    SELECT MAX(total_sales)
+    FROM (
+        SELECT SUM(o.order_ammount) AS total_sales
+        FROM Orders o
+        JOIN Products p ON o.product_id = p.product_id
+        GROUP BY p.product_category
+    ) AS category_totals
+);
+
+--- Часть 2
+--- Пункт 3
+SELECT product_category, product_name, total_sales
+FROM Products p
+JOIN (
+    SELECT o.product_id,
+           SUM(o.order_ammount) AS total_sales
+    FROM Orders o
+    GROUP BY o.product_id
+) AS product_sales ON p.product_id = product_sales.product_id
+WHERE (p.product_category, total_sales) IN (
+    SELECT p1.product_category,
+           MAX(product_sales.total_sales) AS max_sales
+    FROM Products p1
+    JOIN (
+        SELECT o.product_id,
+               SUM(o.order_ammount) AS total_sales
+        FROM Orders o
+        GROUP BY o.product_id
+    ) AS product_sales ON p1.product_id = product_sales.product_id
+    GROUP BY p1.product_category
+);
