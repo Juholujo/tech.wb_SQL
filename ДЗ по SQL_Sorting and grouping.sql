@@ -44,13 +44,15 @@ ORDER BY seller_id ASC; -- Сортируем результаты по возр
 -- Мы не включили их, так как по условию задачи рассматриваются только продавцы,
 -- продающие более одной категории товаров и разделяемые на 'rich' и 'poor' на основе выручки 50 000
 
--- 2 Часть
--- Пункт 2
+--------------------------------- 2 Часть -----------------------------------------------
+--------------------------------- Пункт 2 -----------------------------------------------
+
+-- Запрос для получения количества полных месяцев с даты регистрации и разницы между максимальным и минимальным сроком доставки для неуспешных продавцов
 SELECT seller_id,
-       FLOOR((CURRENT_DATE - MIN(TO_DATE(date_reg, 'DD/MM/YYYY'))) / 30)::int AS month_from_registration,
-       (SELECT MAX(delivery_days) - MIN(delivery_days)
+       FLOOR((CURRENT_DATE - MIN(TO_DATE(date_reg, 'DD/MM/YYYY'))) / 30)::int AS month_from_registration, -- Вычисляем количество полных месяцев с даты регистрации продавца, считая, что в месяце 30 дней
+       (SELECT MAX(delivery_days) - MIN(delivery_days) -- Вычисляем разницу между максимальным и минимальным сроком доставки среди неуспешных продавцов
         FROM sellers
-        WHERE category != 'Bedding'
+        WHERE category != 'Bedding' -- Исключаем категорию 'Bedding' из расчетов
           AND seller_id IN (
               SELECT seller_id
               FROM sellers
@@ -62,15 +64,22 @@ SELECT seller_id,
 FROM sellers
 WHERE category != 'Bedding'
 GROUP BY seller_id
-HAVING COUNT(DISTINCT category) >= 1 AND SUM(revenue) <= 50000
-ORDER BY seller_id ASC;
+HAVING COUNT(DISTINCT category) >= 1 AND SUM(revenue) <= 50000 -- Выбираем продавцов с одной или более категориями и суммарной выручкой не более 50 00
+ORDER BY seller_id ASC;   -- Сортируем результаты по возрастанию seller_id
 
+-- NB:
+-- Здесь включил продавцов с одной категорией товаров ( их ранее условно называл no_name), предполагая, что они неуспешные
+-- Сделали это, так как по условию задачи требуется посчитать для всех неуспешных продавцов, включая тех, кто продает только одну категорию товаров
+-- Неуспешными по моему мнению считаются те, у кого количество категорий больше или равно 1 и суммарная выручка менее или равна 50 000
+-- Это означает, что продавцы с одной категорией и выручкой менее или равной 50 000 также включены в результаты
 
--- 2 Часть
--- Пункт 3
-SELECT seller_id, string_agg(DISTINCT category, ' - ' ORDER BY category) AS category_pair
+--------------------------------- 2 Часть -----------------------------------------------
+--------------------------------- Пункт 3 -----------------------------------------------
+
+-- Запрос для выбора продавцов, зарегистрированных в 2022 году, которые продают ровно 2 категории товаров с суммарной выручкой более 75 000
+SELECT seller_id, string_agg(DISTINCT category, ' - ' ORDER BY category) AS category_pair -- Объединяем названия категорий в одну строку с разделителем ' - ', сортируя категории в алфавитном порядке
 FROM sellers
-WHERE EXTRACT(YEAR FROM TO_DATE(date_reg, 'DD/MM/YYYY')) = 2022
+WHERE EXTRACT(YEAR FROM TO_DATE(date_reg, 'DD/MM/YYYY')) = 2022 -- Отбираем продавцов, зарегистрированных в 2022 году
 GROUP BY seller_id
-HAVING COUNT(DISTINCT category) = 2 AND SUM(revenue) > 75000
-ORDER BY seller_id ASC;
+HAVING COUNT(DISTINCT category) = 2 AND SUM(revenue) > 75000 -- Оставляем только тех, кто продает ровно 2 различные категории товаров И суммарная выручка которых превышает 75 000
+ORDER BY seller_id ASC; -- Сортируем результаты по возрастанию seller_id
