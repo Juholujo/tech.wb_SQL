@@ -14,11 +14,11 @@ ORDER BY user_count desc; -- Сортируем результаты по кол
 
 --------------------------------- 1 Часть -----------------------------------------------
 --------------------------------- Пункт 2 -----------------------------------------------
-SELECT category, ROUND(AVG(price), 2) AS avg_price
+-- Запрос для расчета средней цены товаров по категориям, где в названии товара содержатся слова 'hair' или 'home'
+SELECT category, ROUND(AVG(price), 2) AS avg_price  -- Округляем среднюю цену до двух знаков после запятой и называем столбец avg_price
 FROM products
-WHERE
-    name ILIKE '%hair%' OR name ILIKE '%home%'
-GROUP BY category;
+WHERE name ILIKE '%hair%' OR name ILIKE '%home%'  -- Фильтруем товары по наличию слов 'hair' или 'home' в названии
+GROUP BY category; -- Группируем результаты по категориям товаров
 
 -- 2 Часть
 -- Пункт 1
