@@ -1,79 +1,41 @@
 --------------------------------- 1 Часть -----------------------------------------------
---------------------------------- Запрос без оконных функций с максимальной зарплатой -----------------------------------------------
+--------------------------------- Запрос без оконных функций для нахождения сотрудников с максимальной и минимальной зарплатой-----------------------------------------------
 
-SELECT s.first_name, s.last_name, s.salary, s.industry, hs.highest_sal_name AS name_highest_sal
-FROM salary s
-JOIN ( -- Подзапрос для получения максимальной зарплаты в каждом отделе
-    SELECT industry, MAX(salary) AS max_salary
-    FROM salary
-    GROUP BY industry
-) ms ON s.industry = ms.industry AND s.salary = ms.max_salary -- Соединение по отделу и максимальной зарплате
-JOIN ( -- Подзапрос для получения имен сотрудников с максимальной зарплатой в каждом отделе
-    SELECT industry, first_name AS highest_sal_name
-    FROM salary
-    WHERE (industry, salary) IN ( -- Выбор записей с максимальной зарплатой в каждом отделе
-            SELECT industry, MAX(salary)
-            FROM salary
-            GROUP BY industry
-        ) ) hs ON s.industry = hs.industry AND s.first_name = hs.highest_sal_name -- Соединение по отделу и имени сотрудника с максимальной зарплатой
-ORDER BY s.salary DESC, s.first_name; -- Сортировка по зарплате в порядке убывания
+SELECT s.first_name, s.last_name, s.salary, s.industry, l.name_lowest_sal,h.name_highest_sal
+FROM salary AS s
+JOIN (SELECT s_high.industry, MIN(s_high.first_name) AS name_highest_sal -- Присоединяем подзапрос с именем сотрудника с максимальной зарплатой в отделе
+    FROM salary AS s_high -- Подзапрос для получения максимальной зарплаты в каждом отделе
+    JOIN (SELECT industry, MAX(salary) AS max_salary
+        FROM salary
+        GROUP BY industry
+    ) AS ms_high ON s_high.industry = ms_high.industry AND s_high.salary = ms_high.max_salary
+    GROUP BY s_high.industry
+) AS h ON s.industry = h.industry
+JOIN (SELECT s_low.industry, MIN(s_low.first_name) AS name_lowest_sal -- Присоединяем подзапрос с именем сотрудника с минимальной зарплатой в отделе
+    FROM salary AS s_low -- Подзапрос для получения минимальной зарплаты в каждом отделе
+    JOIN (SELECT industry, MIN(salary) AS min_salary
+        FROM salary
+        GROUP BY industry
+    ) AS ms_low ON s_low.industry = ms_low.industry AND s_low.salary = ms_low.min_salary
+    GROUP BY s_low.industry
+) AS l ON s.industry = l.industry
+ORDER BY s.salary DESC, s.first_name;
 
 --------------------------------- 1 Часть -----------------------------------------------
---------------------------------- Запрос с оконной функцией с максимальной зарплатой -----------------------------------------------
-
--- Выводим список всех сотрудников и имена сотрудников, получающими самую высокую зарплату в отделе
--- Используем оконную функцию FIRST_VALUE для определения имени сотрудника с максимальной зарплатой в отделе
-
+--------------------------------- Запрос с оконными функциями для нахождения сотрудников с максимальной и минимальной зарплатой- -----------------------------------------------
 SELECT s.first_name, s.last_name, s.salary, s.industry,
-    -- Определяем имя сотрудника с максимальной зарплатой в отделе
     FIRST_VALUE(s.first_name) OVER (
-        PARTITION BY s.industry           -- Разделяем данные по отделам
-        ORDER BY s.salary DESC,           -- Сортируем по зарплате в порядке убывания
-                 s.first_name ASC         -- При равной зарплате сортируем по имени
-    ) AS name_highest_sal
+        PARTITION BY s.industry                 -- Разделяем данные по отделам (industry)
+        ORDER BY s.salary ASC, s.first_name ASC -- Сортируем по зарплате (по возрастанию) и по имени (по алфавиту)
+    ) AS name_lowest_sal, -- Получаем имя сотрудника с минимальной зарплатой в отделе
+    -- Получаем имя сотрудника с максимальной зарплатой в отделе
+    LAST_VALUE(s.first_name) OVER (
+        PARTITION BY s.industry                 -- Разделяем данные по отделам
+        ORDER BY s.salary ASC, s.first_name DESC-- Сортируем по зарплате (по возрастанию) и по имени (в обратном алфавитном порядке)
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING -- Охватываем все строки в разделе
+    ) AS name_highest_sal -- Получаем имя сотрудника с максимальной зарплатой в отделе
 FROM salary s
-ORDER BY s.salary DESC, s.first_name;  -- Сортировка по зарплате в порядке убывания, сортировка по имени
-
---------------------------------- 1 Часть -----------------------------------------------
---------------------------------- Запрос без оконных функций с минимальной зарплатой -----------------------------------------------
-
--- Выводим список всех сотрудников и имена сотрудников, получающими самую низкую зарплату в отделе
-
--- Создаем CTE для получения минимальной зарплаты в каждом отделе
-WITH min_salaries AS (
-    SELECT industry, MIN(salary) AS min_salary   -- Находим минимальную зарплату в каждом отделе
-    FROM salary
-    GROUP BY industry
-),
--- Создаем CTE для получения имен сотрудников с минимальной зарплатой в каждом отделе
-min_salary_employees AS ( SELECT s.industry, MIN(s.first_name) AS lowest_sal_name  -- Если несколько сотрудников имеют минимальную зарплату, выбираем имя по алфавиту
-    FROM salary s
-    JOIN min_salaries ms ON s.industry = ms.industry AND s.salary = ms.min_salary  -- Соединяем по отделу и минимальной зарплате
-    GROUP BY s.industry
-)
-SELECT s.first_name, s.last_name, s.salary, s.industry, mse.lowest_sal_name AS name_lowest_sal    -- Имя сотрудника с минимальной зарплатой в отделе
-FROM salary s
--- Соединяем с таблицей сотрудников с минимальной зарплатой в отделе
-JOIN min_salary_employees mse ON s.industry = mse.industry
-ORDER BY s.salary ASC, s.first_name; -- Сортировка по зарплате в порядке возрастания, сортируем по имени
-
---------------------------------- 1 Часть -----------------------------------------------
---------------------------------- Запрос с оконной функцией с минимальной зарплатой -----------------------------------------------
-
--- Выводим список всех сотрудников и имена сотрудников, получающими самую низкую зарплату в отделе
--- Используем оконную функцию FIRST_VALUE для определения имени сотрудника с минимальной зарплатой в отделе
-
-SELECT s.first_name, s.last_name, s.salary, s.industry,
-    -- Определяем имя сотрудника с минимальной зарплатой в отделе
-    FIRST_VALUE(s.first_name) OVER (
-        PARTITION BY s.industry           -- Разделяем данные по отделам
-        ORDER BY s.salary ASC,            -- Сортируем по зарплате в порядке возрастания
-                 s.first_name ASC         -- Сортируем по имени
-    ) AS name_lowest_sal
-FROM salary s
-ORDER BY s.salary ASC, s.first_name; -- Сортировка по зарплате в порядке возрастания,сортируем по имени
-
-
+ORDER BY s.salary DESC, s.first_name; -- Сортируем общий результат по зарплате (по убыванию), по имени (по возрастанию)
 
 --------------------------------- 2 Часть -----------------------------------------------
 --------------------------------- Пункт 1 -----------------------------------------------
