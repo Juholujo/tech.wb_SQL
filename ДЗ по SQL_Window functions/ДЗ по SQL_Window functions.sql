@@ -53,7 +53,6 @@ ORDER BY s.SHOPNUMBER;
 --------------------------------- Пункт 2 -----------------------------------------------
 
 -- Запрос возвращает дату, город и долю от суммарных продаж по дням и по городам категории 'Частота'
-SELECT
 SELECT s.DATE AS DATE_, sh.CITY, SUM(s.QTY * g.PRICE) / SUM(SUM(s.QTY * g.PRICE)) OVER (PARTITION BY s.DATE) AS SUM_SALES_REL
 FROM SALES s
 JOIN GOODS g ON s.ID_GOOD = g.ID_GOOD
