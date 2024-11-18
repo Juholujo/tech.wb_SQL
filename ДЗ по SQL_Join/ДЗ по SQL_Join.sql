@@ -56,36 +56,67 @@ GROUP BY p.product_category;  -- Группируем результаты по 
 --------------------------------- Пункт 2 -----------------------------------------------
 
 -- Запрос для определения категории продукта с наибольшей общей суммой продаж
-SELECT p.product_category,
-       SUM(o.order_ammount) AS total_sales
+SELECT p.product_category, SUM(o.order_ammount) AS total_sales
 FROM Orders o
 JOIN Products p ON o.product_id = p.product_id
 GROUP BY p.product_category
 ORDER BY total_sales DESC
 LIMIT 1;  -- Выбираем категорию с максимальной суммой продаж
 
-
 --------------------------------- 2 Часть -----------------------------------------------
 --------------------------------- Пункт 3 -----------------------------------------------
 
--- Запрос для определения продукта с максимальной суммой продаж в каждой категории
-SELECT p.product_category, p.product_name, product_sales.total_sales
+-- Запрос для определения продуктов с максимальной суммой продаж в каждой категории
+SELECT p.product_category, p.product_name, product_sales.max_product_sales
 FROM Products p
 JOIN ( -- Подзапрос для вычисления общей суммы продаж для каждого продукта
     SELECT o.product_id,
-           SUM(o.order_ammount) AS total_sales
+           SUM(o.order_ammount) AS max_product_sales
     FROM Orders o
     GROUP BY o.product_id
 ) AS product_sales ON p.product_id = product_sales.product_id
-WHERE (p.product_category, product_sales.total_sales) IN ( -- Подзапрос для определения максимальной суммы продаж в каждой категории
+WHERE (p.product_category, product_sales.max_product_sales) IN ( -- Подзапрос для определения максимальной суммы продаж в каждой категории
     SELECT p1.product_category,
-           MAX(product_sales.total_sales) AS max_sales
+           MAX(product_sales.max_product_sales) AS max_sales
     FROM Products p1
     JOIN ( -- Повторный подзапрос для сумм продаж каждого продукта
         SELECT o.product_id,
-               SUM(o.order_ammount) AS total_sales
+               SUM(o.order_ammount) AS max_product_sales
         FROM Orders o
         GROUP BY o.product_id
     ) AS product_sales ON p1.product_id = product_sales.product_id
     GROUP BY p1.product_category
 );
+
+--------------------------------- 2 Часть -----------------------------------------------
+--------------------------------- Дополнение-----------------------------------------------
+
+--- Связал три предыдущих запроса в один с использованием подзапросов
+
+SELECT pc.product_category, pc.max_sales_product_name, pc.total_category_sales, pc.max_product_sales
+FROM (
+    SELECT p.product_category, SUM(o.order_ammount) AS total_category_sales,
+        (
+            SELECT p2.product_name -- Подзапрос для нахождения названия продукта с максимальной суммой продаж
+            FROM products p2
+            JOIN orders o2 ON p2.product_id = o2.product_id -- Соединяем таблицы продуктов и заказов
+            WHERE p2.product_category = p.product_category
+            GROUP BY p2.product_name
+            ORDER BY SUM(o2.order_ammount) DESC
+            LIMIT 1
+        ) AS max_sales_product_name,
+        (
+            SELECT MAX(product_sales.total_sales) -- Подзапрос для нахождения максимальной суммы продаж одного продукта
+            FROM (
+                SELECT p3.product_category, SUM(o3.order_ammount) AS total_sales
+                FROM orders o3
+                JOIN products p3 ON o3.product_id = p3.product_id -- Соединяем таблицы продуктов и заказов
+                WHERE p3.product_category = p.product_category
+                GROUP BY p3.product_id, p3.product_category
+            ) AS product_sales
+            WHERE product_sales.product_category = p.product_category
+        ) AS max_product_sales
+    FROM orders o
+    JOIN products p ON o.product_id = p.product_id -- Соединяем таблицы продуктов и заказов
+    GROUP BY p.product_category
+) pc;
